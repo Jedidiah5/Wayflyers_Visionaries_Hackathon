@@ -3,18 +3,14 @@
 import Link from "next/link";
 import type { InventoryRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import {
-  AlertTriangle,
-  ArrowRight,
-  Download,
-  TriangleAlert,
-  X,
-} from "lucide-react";
+import { AlertTriangle, ArrowRight, Download, X } from "lucide-react";
 
 interface InventoryDeepDiveProps {
   data: InventoryRow[];
-  productFocus?: string;
 }
+
+const TABLE_GRID =
+  "grid grid-cols-[minmax(88px,1fr)_minmax(96px,1.1fr)_minmax(72px,1fr)_40px_minmax(72px,0.8fr)_minmax(72px,0.8fr)_minmax(64px,0.65fr)_72px] gap-2 sm:gap-3";
 
 function BurnRateChart({ data }: { data: InventoryRow[] }) {
   const rates = data.map((row) => row.weeklySellRate);
@@ -51,181 +47,108 @@ function BurnRateChart({ data }: { data: InventoryRow[] }) {
   );
 }
 
-function InventoryRiskRow({
-  row,
-  isHighlighted,
-}: {
-  row: InventoryRow;
-  isHighlighted: boolean;
-}) {
-  const isNegative = row.unitsRemaining < 0;
-  const isLowPositive =
-    !isNegative && row.unitsRemaining <= 20 && row.daysToStockout === 0;
-
-  if (isHighlighted) {
+function StatusBadge({ status }: { status: InventoryRow["status"] }) {
+  if (status === "CRITICAL") {
     return (
-      <div className="relative overflow-hidden border-b border-[#1a1a1a] bg-accent p-3 text-black last:border-b-0 sm:p-2">
-        <div className="pointer-events-none absolute inset-0 border border-black opacity-20" />
-        <div className="relative z-10 flex items-center gap-2">
-          <TriangleAlert className="h-4 w-4 shrink-0 animate-pulse" />
-          <span className="truncate font-mono text-xs font-bold tracking-wider">
-            {row.sku}
-          </span>
-        </div>
-        <div className="relative z-10 mt-2 grid grid-cols-3 gap-2 font-mono text-xs sm:mt-0 sm:hidden">
-          <div>
-            <div className="text-[10px] uppercase opacity-70">Units</div>
-            <div className="font-bold">{row.unitsRemaining}</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase opacity-70">Rate</div>
-            <div className="opacity-80">{row.weeklySellRate}/wk</div>
-          </div>
-          <div>
-            <div className="text-[10px] uppercase opacity-70">Days</div>
-            <div className="font-bold">{row.daysToStockout}</div>
-          </div>
-        </div>
-        <div className="relative z-10 hidden grid-cols-12 items-center sm:grid">
-          <div className="col-span-4 flex items-center gap-2">
-            <TriangleAlert className="h-4 w-4 animate-pulse" />
-            <span className="text-xs font-bold tracking-wider">{row.sku}</span>
-          </div>
-          <div className="col-span-3 text-right font-bold">
-            {row.unitsRemaining}
-          </div>
-          <div className="col-span-3 text-right opacity-80">
-            {row.weeklySellRate}/wk
-          </div>
-          <div className="col-span-2 text-right font-bold">
-            {row.daysToStockout}
-          </div>
-        </div>
-      </div>
+      <span className="inline-block rounded-badge bg-critical px-1.5 py-0.5 font-mono text-[9px] font-medium uppercase tracking-wider text-white sm:text-[10px]">
+        {status}
+      </span>
+    );
+  }
+
+  if (status === "WARNING") {
+    return (
+      <span className="inline-block rounded-badge border border-warning px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-warning sm:text-[10px]">
+        {status}
+      </span>
     );
   }
 
   return (
-    <div className="border-b border-[#1a1a1a] p-3 transition-colors last:border-b-0 hover:bg-[#0a0a0a] sm:p-2">
-      <div className="flex items-center gap-2">
-        <div
-          className={cn(
-            "h-2 w-2 shrink-0",
-            isNegative || row.status === "CRITICAL"
-              ? "bg-critical"
-              : isLowPositive
-                ? "bg-accent"
-                : "bg-[#2a2a2a]"
-          )}
-        />
-        <span className="truncate font-mono text-xs tracking-wider">
-          {row.sku}
-        </span>
-      </div>
-      <div className="mt-2 grid grid-cols-3 gap-2 font-mono text-sm sm:mt-0 sm:hidden">
-        <div>
-          <div className="text-[10px] uppercase text-text-muted">Units</div>
-          <div
-            className={cn(
-              "font-medium",
-              isLowPositive && "text-accent",
-              isNegative && "text-critical"
-            )}
-          >
-            {row.unitsRemaining}
-          </div>
-        </div>
-        <div>
-          <div className="text-[10px] uppercase text-text-muted">Rate</div>
-          <div className="text-text-muted">{row.weeklySellRate}/wk</div>
-        </div>
-        <div>
-          <div className="text-[10px] uppercase text-text-muted">Days</div>
-          <div
-            className={cn(
-              "font-bold",
-              row.daysToStockout <= 0 && "text-critical"
-            )}
-          >
-            {row.daysToStockout}
-          </div>
-        </div>
-      </div>
-      <div className="hidden grid-cols-12 items-center sm:grid">
-        <div className="col-span-4 flex items-center gap-2">
-          <div
-            className={cn(
-              "h-2 w-2",
-              isNegative || row.status === "CRITICAL"
-                ? "bg-critical"
-                : isLowPositive
-                  ? "bg-accent"
-                  : "bg-[#2a2a2a]"
-            )}
-          />
-          <span className="text-xs tracking-wider">{row.sku}</span>
-        </div>
-        <div
-          className={cn(
-            "col-span-3 text-right text-base",
-            isLowPositive && "text-accent",
-            isNegative && "text-critical"
-          )}
-        >
-          {row.unitsRemaining}
-        </div>
-        <div className="col-span-3 text-right text-base text-text-muted">
-          {row.weeklySellRate}/wk
-        </div>
-        <div
-          className={cn(
-            "col-span-2 text-right text-base font-bold",
-            row.daysToStockout <= 0 && "text-critical"
-          )}
-        >
-          {row.daysToStockout}
-        </div>
-      </div>
-    </div>
+    <span className="inline-block rounded-badge border border-border px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-wider text-text-muted sm:text-[10px]">
+      {status}
+    </span>
   );
 }
 
 function InventoryRiskTable({ data }: { data: InventoryRow[] }) {
-  const highlightIndex = data.reduce(
-    (worst, row, index) =>
-      row.unitsRemaining < data[worst].unitsRemaining ? index : worst,
-    0
-  );
+  const headers = [
+    "SKU",
+    "Product",
+    "Colour",
+    "Size",
+    "Units Remaining",
+    "Weekly Sell Rate",
+    "Days to Stockout",
+    "Status",
+  ];
 
   return (
-    <div className="border border-[#1a1a1a]">
-      <div className="hidden grid-cols-12 border-b border-[#1a1a1a] bg-[#0a0a0a] p-2 font-mono text-xs text-text-muted sm:grid">
-        <div className="col-span-4">SKU IDENTIFIER</div>
-        <div className="col-span-3 text-right">UNITS REMAINING</div>
-        <div className="col-span-3 text-right">WEEKLY SELL RATE</div>
-        <div className="col-span-2 text-right">DAYS TO STOCKOUT</div>
-      </div>
+    <div className="overflow-x-auto border border-[#1a1a1a]">
+      <div className="min-w-[720px]">
+        <div
+          className={cn(
+            TABLE_GRID,
+            "border-b border-[#1a1a1a] bg-[#0a0a0a] px-2 py-2 font-mono text-[9px] uppercase tracking-wider text-text-muted sm:px-3 sm:text-[10px]"
+          )}
+        >
+          {headers.map((header, index) => (
+            <div
+              key={header}
+              className={cn(index >= 4 && index <= 6 && "text-right")}
+            >
+              {header}
+            </div>
+          ))}
+        </div>
 
-      <div className="font-mono text-text-primary sm:text-xl">
         {data.map((row, index) => (
-          <InventoryRiskRow
+          <div
             key={row.sku}
-            row={row}
-            isHighlighted={index === highlightIndex}
-          />
+            className={cn(
+              TABLE_GRID,
+              "items-center border-b border-[#1a1a1a] px-2 py-2.5 font-mono text-xs transition-colors last:border-b-0 hover:bg-[#0a0a0a] sm:px-3 sm:text-sm",
+              index % 2 === 1 && "bg-[#080808]"
+            )}
+          >
+            <div className="truncate tracking-wider">{row.sku}</div>
+            <div className="truncate font-body text-[11px] uppercase sm:text-xs">
+              {row.product}
+            </div>
+            <div className="truncate font-body text-[11px] text-text-muted sm:text-xs">
+              {row.colour}
+            </div>
+            <div>{row.size}</div>
+            <div
+              className={cn(
+                "text-right font-bold",
+                row.unitsRemaining < 0 && "text-critical"
+              )}
+            >
+              {row.unitsRemaining}
+            </div>
+            <div className="text-right text-text-muted">{row.weeklySellRate}</div>
+            <div
+              className={cn(
+                "text-right font-bold",
+                row.daysToStockout <= 0 && "text-critical"
+              )}
+            >
+              {row.daysToStockout}
+            </div>
+            <div className="text-right">
+              <StatusBadge status={row.status} />
+            </div>
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-export function InventoryDeepDive({
-  data,
-  productFocus = "ARCH LOGO TEE",
-}: InventoryDeepDiveProps) {
+export function InventoryDeepDive({ data }: InventoryDeepDiveProps) {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pt-14 sm:pt-16">
-      {/* Ambient dashboard background — hidden on small screens */}
       <div className="absolute inset-0 hidden gap-px bg-[#0a0a0a] p-8 opacity-30 md:grid md:grid-cols-12">
         <div className="relative col-span-8 flex h-full flex-col gap-2 border border-[#1a1a1a] bg-black p-4">
           <div className="flex h-8 items-center border-b border-[#1a1a1a]">
@@ -238,18 +161,13 @@ export function InventoryDeepDive({
         <div className="col-span-4 h-full border border-[#1a1a1a] bg-black" />
       </div>
 
-      {/* Panel overlay */}
       <div className="relative z-10 flex h-[calc(100dvh-3.5rem)] min-h-0 items-stretch justify-center bg-black/90 backdrop-blur-sm sm:h-[calc(100dvh-4rem)] md:items-center md:bg-black/80">
-        <div className="relative z-50 flex min-h-0 w-full max-w-[800px] flex-1 flex-col border-[#1a1a1a] bg-black shadow-[0_0_0_1px_rgba(26,26,26,1)] md:h-auto md:max-h-[870px] md:flex-none md:border">
-          {/* Header bar */}
+        <div className="relative z-50 flex min-h-0 w-full max-w-[960px] flex-1 flex-col border-[#1a1a1a] bg-black shadow-[0_0_0_1px_rgba(26,26,26,1)] md:h-auto md:max-h-[870px] md:flex-none md:border">
           <div className="flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-[#1a1a1a] bg-[#0a0a0a] px-3 py-2 sm:px-4 sm:py-0">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
               <AlertTriangle className="h-4 w-4 shrink-0 text-accent sm:h-[18px] sm:w-[18px]" />
-              <h2 className="truncate font-mono text-[10px] uppercase tracking-widest text-text-primary sm:text-[11px] sm:whitespace-normal">
-                <span className="sm:hidden">Inv Risk // {productFocus}</span>
-                <span className="hidden sm:inline">
-                  Inventory Risk Report // {productFocus}
-                </span>
+              <h2 className="font-mono text-[10px] uppercase tracking-widest text-text-primary sm:text-[11px]">
+                Inventory Risk // Critical SKUs
               </h2>
             </div>
             <Link
@@ -261,7 +179,6 @@ export function InventoryDeepDive({
             </Link>
           </div>
 
-          {/* Meta data row */}
           <div className="grid shrink-0 grid-cols-2 border-b border-[#1a1a1a] bg-black font-mono text-[10px] sm:grid-cols-4 sm:text-xs">
             <div className="flex flex-col gap-1 border-b border-r border-[#1a1a1a] p-2 sm:border-b-0">
               <span className="text-text-muted">Priority Level</span>
@@ -281,7 +198,6 @@ export function InventoryDeepDive({
             </div>
           </div>
 
-          {/* Scrollable content */}
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-black p-3 sm:p-4">
             <BurnRateChart data={data} />
             <InventoryRiskTable data={data} />
@@ -293,7 +209,6 @@ export function InventoryDeepDive({
             </div>
           </div>
 
-          {/* Footer action bar */}
           <div className="flex shrink-0 flex-col gap-2 border-t border-[#1a1a1a] bg-black p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:flex-row sm:items-center sm:justify-between sm:gap-4 sm:p-4">
             <button
               type="button"
