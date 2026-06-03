@@ -11,57 +11,69 @@ function generateId() {
 export default function ChatPage() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const sendingRef = useRef(false);
 
   const sendMessage = useCallback(async (content: string) => {
+    const trimmed = content.trim();
+    if (!trimmed || sendingRef.current) return;
+
     const userMessage: ChatMessage = {
       id: generateId(),
       role: "user",
-      content,
+      content: trimmed,
     };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setIsLoading(true);
+    let apiMessages: { role: "user" | "assistant"; content: string }[] = [];
 
-    try {
-      const history = [...messages, userMessage].map((m) => ({
+    setMessages((prev) => {
+      apiMessages = [...prev, userMessage].map((m) => ({
         role: m.role,
         content: m.content,
       }));
+      return [...prev, userMessage];
+    });
 
+    sendingRef.current = true;
+    setIsLoading(true);
+
+    try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history }),
+        body: JSON.stringify({ messages: apiMessages }),
       });
 
+      const data = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.error || "Failed to get response");
+        throw new Error(data.error || "Failed to get response");
       }
 
-      const data = await response.json();
-
-      const assistantMessage: ChatMessage = {
-        id: generateId(),
-        role: "assistant",
-        content: data.content,
-      };
-
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          role: "assistant",
+          content: data.content,
+        },
+      ]);
     } catch (error) {
-      const assistantMessage: ChatMessage = {
-        id: generateId(),
-        role: "assistant",
-        content:
-          error instanceof Error
-            ? error.message
-            : "Something went wrong. Please try again.",
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: generateId(),
+          role: "assistant",
+          content:
+            error instanceof Error
+              ? error.message
+              : "Something went wrong. Please try again.",
+        },
+      ]);
     } finally {
+      sendingRef.current = false;
       setIsLoading(false);
     }
-  }, [messages]);
+  }, []);
 
   const sendMessageRef = useRef(sendMessage);
   sendMessageRef.current = sendMessage;
@@ -75,7 +87,7 @@ export default function ChatPage() {
   }, []);
 
   return (
-    <main className="mx-auto flex h-[calc(100vh-4rem)] max-w-4xl flex-col px-8">
+    <main className="h-[calc(100dvh-3.5rem)] min-h-0 sm:h-[calc(100dvh-4rem)]">
       <ChatInterface
         messages={messages}
         isLoading={isLoading}

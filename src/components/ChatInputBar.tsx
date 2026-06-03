@@ -56,7 +56,7 @@ export function ChatInputBar({
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={disabled}
-          className="w-full bg-transparent px-4 py-3 font-body text-sm text-text-primary placeholder:text-text-muted focus:outline-none disabled:opacity-50"
+          className="min-w-0 flex-1 bg-transparent px-4 py-3 font-body text-sm text-text-primary placeholder:text-text-muted focus:outline-none disabled:opacity-50"
         />
         <button
           type="submit"

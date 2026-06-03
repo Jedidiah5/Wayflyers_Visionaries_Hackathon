@@ -14,6 +14,7 @@ const config: Config = {
         "surface-elevated": "#1a1a1a",
         border: "#2a2a2a",
         accent: "#ffffff",
+        acid: "#c8ff00",
         critical: "#ff3b3b",
         warning: "#ffaa00",
         "text-primary": "#e2e2e2",
