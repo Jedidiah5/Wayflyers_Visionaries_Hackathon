@@ -13,7 +13,7 @@ const config: Config = {
         surface: "#111111",
         "surface-elevated": "#1a1a1a",
         border: "#2a2a2a",
-        accent: "#c8ff00",
+        accent: "#ffffff",
         critical: "#ff3b3b",
         warning: "#ffaa00",
         "text-primary": "#e2e2e2",

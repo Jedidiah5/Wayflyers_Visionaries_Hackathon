@@ -57,7 +57,7 @@ export function InsightCard({ insight, onAction }: InsightCardProps) {
         {isOpportunity ? (
           <button
             onClick={() => onAction(insight)}
-            className="bg-accent px-4 py-2 font-display text-sm uppercase tracking-wide text-black transition-colors hover:bg-white"
+            className="bg-accent px-4 py-2 font-display text-sm uppercase tracking-wide text-black transition-colors hover:bg-text-muted"
           >
             {insight.action}
           </button>

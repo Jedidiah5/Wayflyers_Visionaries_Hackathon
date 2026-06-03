@@ -6,7 +6,7 @@ interface AdsTableProps {
 }
 
 const verdictStyles: Record<AdRow["verdict"], string> = {
-  SCALE: "border-accent text-accent bg-[#141a00]",
+  SCALE: "border-accent text-accent bg-[#1a1a1a]",
   MAINTAIN: "border-border text-text-muted",
   REVIEW: "border-warning text-warning bg-[#1a1200]",
   PAUSE: "border-warning text-warning bg-[#1a1200]",

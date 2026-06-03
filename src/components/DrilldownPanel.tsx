@@ -128,7 +128,7 @@ export function DrilldownPanel({
                   <Link
                     href="/inventory"
                     onClick={onClose}
-                    className="inline-block font-mono text-xs uppercase tracking-widest text-accent hover:text-white"
+                    className="inline-block font-mono text-xs uppercase tracking-widest text-accent hover:opacity-70"
                   >
                     View full inventory →
                   </Link>
@@ -141,7 +141,7 @@ export function DrilldownPanel({
                   <Link
                     href="/ads"
                     onClick={onClose}
-                    className="inline-block font-mono text-xs uppercase tracking-widest text-accent hover:text-white"
+                    className="inline-block font-mono text-xs uppercase tracking-widest text-accent hover:opacity-70"
                   >
                     View full ad performance →
                   </Link>

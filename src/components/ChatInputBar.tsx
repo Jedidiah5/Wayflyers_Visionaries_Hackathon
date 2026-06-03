@@ -61,7 +61,7 @@ export function ChatInputBar({
         <button
           type="submit"
           disabled={disabled || !value.trim()}
-          className="min-w-[100px] bg-accent px-4 py-3 font-display text-xs uppercase tracking-wide text-black transition-colors hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-w-[100px] bg-accent px-4 py-3 font-display text-xs uppercase tracking-wide text-black transition-colors hover:bg-text-muted disabled:cursor-not-allowed disabled:opacity-50"
         >
           Submit
         </button>

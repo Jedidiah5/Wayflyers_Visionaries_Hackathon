@@ -304,7 +304,7 @@ export function InventoryDeepDive({
             </button>
             <button
               type="button"
-              className="flex w-full items-center justify-center gap-2 bg-accent px-4 py-2.5 font-display text-lg uppercase text-black transition-colors hover:bg-white sm:w-auto sm:px-6 sm:py-1 sm:text-2xl"
+              className="flex w-full items-center justify-center gap-2 bg-accent px-4 py-2.5 font-display text-lg uppercase text-black transition-colors hover:bg-text-muted sm:w-auto sm:px-6 sm:py-1 sm:text-2xl"
             >
               <span className="text-center">Initiate Re-allocation</span>
               <ArrowRight className="h-5 w-5 shrink-0" />
