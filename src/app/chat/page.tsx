@@ -54,7 +54,7 @@ export default function ChatPage() {
         role: "assistant",
         content:
           error instanceof Error
-            ? `Error: ${error.message}. Check that ANTHROPIC_API_KEY is set in .env.local.`
+            ? `Error: ${error.message}. Check that GEMINI_API_KEY is set in .env.local.`
             : "Something went wrong. Please try again.",
       };
       setMessages((prev) => [...prev, assistantMessage]);

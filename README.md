@@ -7,14 +7,14 @@ AI-powered internal dashboard for Pretty Fly streetwear brand operations.
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
-- Anthropic Claude API (`claude-sonnet-4-20250514`)
+- Google Gemini API (`gemini-2.0-flash`)
 
 ## Setup
 
 ```bash
 npm install
 cp .env.example .env.local
-# Add your ANTHROPIC_API_KEY to .env.local
+# Add your GEMINI_API_KEY to .env.local
 npm run dev
 ```
 
