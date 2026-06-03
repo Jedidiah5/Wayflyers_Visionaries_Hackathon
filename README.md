@@ -7,7 +7,7 @@ AI-powered internal dashboard for Pretty Fly streetwear brand operations.
 - Next.js 14 (App Router)
 - TypeScript
 - Tailwind CSS
-- Google Gemini API (`gemini-2.0-flash`)
+- Google Gemini API (auto-selects an available Flash model)
 
 ## Setup
 
