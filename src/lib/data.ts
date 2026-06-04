@@ -151,6 +151,69 @@ function buildInventoryData(sellRates: Map<string, number>): InventoryRow[] {
   });
 }
 
+/** Campaign highlighted on the dashboard ads insight (last N months). */
+const DEAD_WEIGHT_CAMPAIGN_NAME = "Brand_Awareness_UK";
+const INSIGHT_AD_LOOKBACK_MONTHS = 6;
+
+type AdDailyRow = {
+  date: string;
+  campaign_name: string;
+  spend_gbp: string;
+  conversion_value_gbp: string;
+};
+
+function getLatestAdDate(): Date {
+  let latest = 0;
+  for (const file of ["google_ads_daily.csv", "meta_ads_daily.csv"] as const) {
+    for (const row of readCsv<{ date: string }>(file)) {
+      const ts = new Date(row.date).getTime();
+      if (Number.isFinite(ts) && ts > latest) latest = ts;
+    }
+  }
+  return new Date(latest);
+}
+
+/** Sum spend/revenue for a campaign; optional rolling month window from latest ad date. */
+function sumCampaignMetrics(
+  campaignName: string,
+  months?: number
+): { spend: number; revenue: number; platform: "GOOGLE" | "META" } | null {
+  const cutoff =
+    months != null
+      ? (() => {
+          const end = getLatestAdDate();
+          const start = new Date(end);
+          start.setMonth(start.getMonth() - months);
+          return start;
+        })()
+      : null;
+
+  let spend = 0;
+  let revenue = 0;
+  let platform: "GOOGLE" | "META" | null = null;
+
+  const ingestFile = (file: string, plat: "GOOGLE" | "META") => {
+    for (const row of readCsv<AdDailyRow>(file)) {
+      if (row.campaign_name !== campaignName) continue;
+      if (cutoff && new Date(row.date) < cutoff) continue;
+      spend += parseNum(row.spend_gbp);
+      revenue += parseNum(row.conversion_value_gbp);
+      platform = plat;
+    }
+  };
+
+  ingestFile("google_ads_daily.csv", "GOOGLE");
+  ingestFile("meta_ads_daily.csv", "META");
+
+  if (spend === 0 && revenue === 0) return null;
+
+  return {
+    spend: Math.round(spend),
+    revenue: Math.round(revenue),
+    platform: platform ?? "META",
+  };
+}
+
 function buildAdsData(): AdRow[] {
   type Agg = { spend: number; revenue: number };
   const campaigns = new Map<string, Agg & { platform: "GOOGLE" | "META" }>();
@@ -441,7 +504,20 @@ function buildBriefingData(
       ? ads.reduce((s, a) => s + a.revenue, 0) / raw.totalAdSpend
       : 0;
 
-  const zeroRevenueCampaign = ads.find((a) => a.spend > 10_000 && a.revenue === 0);
+  const deadWeightMetrics = sumCampaignMetrics(
+    DEAD_WEIGHT_CAMPAIGN_NAME,
+    INSIGHT_AD_LOOKBACK_MONTHS
+  );
+  const deadWeightCampaign = deadWeightMetrics
+    ? {
+        campaign: `${
+          deadWeightMetrics.platform === "GOOGLE" ? "Google" : "Meta"
+        }: ${DEAD_WEIGHT_CAMPAIGN_NAME}`,
+        spend: deadWeightMetrics.spend,
+        revenue: deadWeightMetrics.revenue,
+      }
+    : null;
+
   const worstPerformer = [...ads].sort((a, b) => a.roas - b.roas)[0];
   const bestPerformer = ads[0];
 
@@ -476,11 +552,11 @@ function buildBriefingData(
     {
       id: "ads-dead-weight",
       severity: "warning",
-      title: zeroRevenueCampaign
-        ? `Ad ROAS at ${formatRoas(blendedRoas)} — but ${formatGbpCompact(zeroRevenueCampaign.spend)} generated £0`
+      title: deadWeightCampaign
+        ? `Ad ROAS at ${formatRoas(blendedRoas)} — but ${formatGbpCompact(deadWeightCampaign.spend)} generated £0`
         : `Blended ad ROAS at ${formatRoas(blendedRoas)}`,
-      summary: zeroRevenueCampaign
-        ? `${zeroRevenueCampaign.campaign} spent ${formatGbp(zeroRevenueCampaign.spend)}. Attributed revenue: £0.`
+      summary: deadWeightCampaign
+        ? `${deadWeightCampaign.campaign} spent ${formatGbp(deadWeightCampaign.spend)} in the last ${INSIGHT_AD_LOOKBACK_MONTHS} months. Attributed revenue: £0.`
         : `Google ROAS ${stats.googleROAS} overall. Meta ROAS ${stats.metaROAS} overall.`,
       detail: `Best: ${bestPerformer?.campaign ?? "—"} at ${formatRoas(bestPerformer?.roas ?? 0)}. Worst: ${worstPerformer?.campaign ?? "—"} at ${formatRoas(worstPerformer?.roas ?? 0)}.`,
       action: "Scale campaigns",
