@@ -6,24 +6,30 @@ interface AdsTableProps {
 }
 
 const verdictStyles: Record<AdRow["verdict"], string> = {
-  SCALE: "border-accent text-accent bg-[#1a1a1a]",
-  MAINTAIN: "border-border text-text-muted",
-  REVIEW: "border-warning text-warning bg-[#1a1200]",
-  PAUSE: "border-warning text-warning bg-[#1a1200]",
-  KILL: "border-critical text-critical bg-[#1a0000]",
+  SCALE: "bg-[#c8ff00] text-black",
+  MAINTAIN: "bg-[#2a2a2a] text-[#888888]",
+  REVIEW: "bg-[#ffaa00] text-black",
+  PAUSE: "bg-[#ff6600] text-black",
+  KILL: "bg-[#ff3b3b] text-white",
 };
 
 function VerdictBadge({ verdict }: { verdict: AdRow["verdict"] }) {
   return (
     <span
       className={cn(
-        "inline-block rounded-badge border px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest",
+        "inline-block rounded-badge px-2 py-0.5 font-mono text-[10px] font-medium uppercase tracking-widest",
         verdictStyles[verdict]
       )}
     >
       {verdict}
     </span>
   );
+}
+
+function getRoasColor(roas: number): string {
+  if (roas > 4) return "text-[#c8ff00]";
+  if (roas >= 2) return "text-text-primary";
+  return "text-critical";
 }
 
 export function AdsTable({ data }: AdsTableProps) {
@@ -50,8 +56,8 @@ export function AdsTable({ data }: AdsTableProps) {
           key={row.campaign}
           className={cn(
             "grid grid-cols-[2fr_0.75fr_1fr_1fr_0.75fr_0.75fr] gap-4 border-b border-border px-6 py-4 transition-colors hover:bg-surface-elevated",
-            index % 2 === 1 && "bg-[#0d0d0d]",
-            row.verdict === "KILL" && "bg-[#120808]"
+            index % 2 === 1 && row.verdict !== "KILL" && "bg-[#0d0d0d]",
+            row.verdict === "KILL" && "bg-[#1a0000]"
           )}
         >
           <div className="font-body text-sm font-medium uppercase text-text-primary">
@@ -67,11 +73,7 @@ export function AdsTable({ data }: AdsTableProps) {
           <div
             className={cn(
               "text-right font-mono text-sm font-bold",
-              row.roas >= 3
-                ? "text-accent"
-                : row.roas < 1
-                  ? "text-critical"
-                  : "text-warning"
+              getRoasColor(row.roas)
             )}
           >
             {formatRoas(row.roas)}
