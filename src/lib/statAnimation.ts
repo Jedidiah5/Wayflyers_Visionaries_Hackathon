@@ -26,12 +26,28 @@ export function parseStatValue(raw: string): ParsedStat {
   }
 
   if (raw.startsWith("£")) {
-    const numeric = raw.slice(1).replace(/,/g, "");
-    const decimals = numeric.includes(".") ? numeric.split(".")[1].length : 0;
+    let numeric = raw.slice(1).replace(/,/g, "").trim().toLowerCase();
+    let scale = 1;
+
+    if (numeric.endsWith("m")) {
+      scale = 1_000_000;
+      numeric = numeric.slice(0, -1);
+    } else if (numeric.endsWith("k")) {
+      scale = 1_000;
+      numeric = numeric.slice(0, -1);
+    }
+
+    const base = parseFloat(numeric);
+    const value = Number.isFinite(base) ? base * scale : 0;
+    const decimals =
+      scale === 1 && numeric.includes(".")
+        ? numeric.split(".")[1]?.length ?? 0
+        : 0;
+
     return {
       kind: "currency",
       prefix: "£",
-      value: parseFloat(numeric),
+      value,
       decimals,
     };
   }

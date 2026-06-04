@@ -350,7 +350,7 @@ function buildSummaryStats(s: SummaryStatsRaw): BriefingStats {
     refundRate: formatPercent(s.refundRate),
     googleROAS: formatRoas(s.googleROAS),
     metaROAS: formatRoas(s.metaROAS),
-    totalAdSpend: formatGbpCompact(s.totalAdSpend),
+    totalAdSpend: formatGbp(s.totalAdSpend),
   };
 }
 
