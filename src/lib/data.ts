@@ -3,7 +3,6 @@ import "server-only";
 import fs from "fs";
 import path from "path";
 import Papa from "papaparse";
-import { cache } from "react";
 import { getDataDir } from "./data-path";
 import {
   formatCount,
@@ -30,7 +29,12 @@ export type { DrilldownPayload };
 // CSV helpers
 // ---------------------------------------------------------------------------
 
+const csvCache = new Map<string, Record<string, string>[]>();
+
 function readCsv<T extends Record<string, string>>(filename: string): T[] {
+  const cached = csvCache.get(filename);
+  if (cached) return cached as T[];
+
   const filePath = path.join(getDataDir(), filename);
   const content = fs.readFileSync(filePath, "utf-8");
   const parsed = Papa.parse<T>(content, {
@@ -40,6 +44,7 @@ function readCsv<T extends Record<string, string>>(filename: string): T[] {
   if (parsed.errors.length > 0) {
     console.warn(`[data] ${filename} parse warnings:`, parsed.errors.slice(0, 3));
   }
+  csvCache.set(filename, parsed.data);
   return parsed.data;
 }
 
@@ -70,7 +75,7 @@ function optionValue(
 // Sell-rate cache (28-day line items → weekly units)
 // ---------------------------------------------------------------------------
 
-const getWeeklySellRatesByVariant = cache((): Map<string, number> => {
+function buildWeeklySellRates(): Map<string, number> {
   const orders = readCsv<{ order_id: string; created_at: string }>("orders.csv");
   const cutoff = Date.now() - 28 * 24 * 60 * 60 * 1000;
   const recentOrderIds = new Set(
@@ -97,13 +102,13 @@ const getWeeklySellRatesByVariant = cache((): Map<string, number> => {
     weekly.set(vid, Math.round(qty / 4));
   });
   return weekly;
-});
+}
 
 // ---------------------------------------------------------------------------
-// Public loaders
+// Loaders (run once at module init)
 // ---------------------------------------------------------------------------
 
-export const getInventoryData = cache((): InventoryRow[] => {
+function buildInventoryData(sellRates: Map<string, number>): InventoryRow[] {
   const products = readCsv<{ product_id: string; title: string }>("products.csv");
   const productTitle = new Map(products.map((p) => [p.product_id, p.title]));
 
@@ -117,8 +122,6 @@ export const getInventoryData = cache((): InventoryRow[] => {
     option2_value: string;
     inventory_quantity: string;
   }>("variants.csv");
-
-  const sellRates = getWeeklySellRatesByVariant();
 
   const rows: InventoryRow[] = variants.map((v) => {
     const unitsRemaining = parseNum(v.inventory_quantity);
@@ -146,9 +149,9 @@ export const getInventoryData = cache((): InventoryRow[] => {
     }
     return a.sku.localeCompare(b.sku);
   });
-});
+}
 
-export const getAdsData = cache((): AdRow[] => {
+function buildAdsData(): AdRow[] {
   type Agg = { spend: number; revenue: number };
   const campaigns = new Map<string, Agg & { platform: "GOOGLE" | "META" }>();
 
@@ -183,7 +186,7 @@ export const getAdsData = cache((): AdRow[] => {
   });
 
   return rows.sort((a, b) => b.roas - a.roas);
-});
+}
 
 export interface RefundDataResult {
   topProducts: SizingRefundRow[];
@@ -194,7 +197,7 @@ export interface RefundDataResult {
   sizingShareOfRefunds: number;
 }
 
-export const getRefundData = cache((): RefundDataResult => {
+function buildRefundData(): RefundDataResult {
   const variants = readCsv<{ variant_id: string; product_id: string }>("variants.csv");
   const products = readCsv<{ product_id: string; title: string }>("products.csv");
   const variantProduct = new Map(variants.map((v) => [v.variant_id, v.product_id]));
@@ -288,7 +291,7 @@ export const getRefundData = cache((): RefundDataResult => {
     sizingShareOfRefunds:
       totalRefunds > 0 ? totalSizingRefunds / totalRefunds : 0,
   };
-});
+}
 
 export interface SummaryStatsRaw {
   totalRevenue: number;
@@ -301,7 +304,7 @@ export interface SummaryStatsRaw {
   totalAdSpend: number;
 }
 
-export const getSummaryStatsRaw = cache((): SummaryStatsRaw => {
+function buildSummaryStatsRaw(): SummaryStatsRaw {
   const orders = readCsv<{ total_price: string }>("orders.csv");
   const totalRevenue = orders.reduce((s, o) => s + parseNum(o.total_price), 0);
   const totalOrders = orders.length;
@@ -336,10 +339,9 @@ export const getSummaryStatsRaw = cache((): SummaryStatsRaw => {
     metaROAS: meta.roas,
     totalAdSpend: google.spend + meta.spend,
   };
-});
+}
 
-export const getSummaryStats = cache((): BriefingStats => {
-  const s = getSummaryStatsRaw();
+function buildSummaryStats(s: SummaryStatsRaw): BriefingStats {
   return {
     totalRevenue: formatGbp(s.totalRevenue),
     totalOrders: formatCount(s.totalOrders),
@@ -350,15 +352,13 @@ export const getSummaryStats = cache((): BriefingStats => {
     metaROAS: formatRoas(s.metaROAS),
     totalAdSpend: formatGbpCompact(s.totalAdSpend),
   };
-});
+}
 
 // ---------------------------------------------------------------------------
 // Derived dashboard / drilldown payloads
 // ---------------------------------------------------------------------------
 
-export function getStockoutProjections(
-  inventory: InventoryRow[] = getInventoryData()
-): StockoutProjectionRow[] {
+function buildStockoutProjections(inventory: InventoryRow[]): StockoutProjectionRow[] {
   return inventory
     .filter((r) => r.unitsRemaining > 0 && r.weeklySellRate > 0)
     .map((r) => ({
@@ -371,13 +371,13 @@ export function getStockoutProjections(
     .slice(0, 4);
 }
 
-export function getSizingRefundsSummary(refundData = getRefundData()): string {
+function buildSizingRefundsSummary(refundData: RefundDataResult): string {
   const recovery = Math.round(refundData.totalSizingValue * 0.3);
   return `${formatGbp(refundData.totalSizingValue)} lost to sizing returns (${formatPercent(refundData.sizingShareOfRefunds, 0)} of all refunds). Fix sizing guidance on the top offenders to recover an estimated ${formatGbp(recovery)} annually (30% reduction).`;
 }
 
-export function getStockoutRecommendation(
-  projections: StockoutProjectionRow[] = getStockoutProjections()
+function buildStockoutRecommendation(
+  projections: StockoutProjectionRow[]
 ): string {
   if (projections.length === 0) {
     return "No positive-stock SKUs with measurable sell-through in the last 28 days.";
@@ -390,31 +390,34 @@ export function getStockoutRecommendation(
   return `Reorder ${parts.join(" and ")} immediately — both hit stockout within ${urgent[0]?.daysRemaining ?? 0} days at current velocity.`;
 }
 
-export const getDrilldownPayload = cache((): DrilldownPayload => {
-  const inventory = getInventoryData();
+function buildDrilldownPayload(
+  inventory: InventoryRow[],
+  refundData: RefundDataResult,
+  ads: AdRow[],
+  stockoutProjections: StockoutProjectionRow[]
+): DrilldownPayload {
   const criticalInventory = inventory
     .filter((r) => r.status !== "OK")
     .slice(0, 50);
 
-  const projections = getStockoutProjections(inventory);
-  const refundData = getRefundData();
-
   return {
     sizingRefunds: refundData.topProducts,
-    sizingSummary: getSizingRefundsSummary(refundData),
+    sizingSummary: buildSizingRefundsSummary(refundData),
     inventory: criticalInventory.length > 0 ? criticalInventory : inventory.slice(0, 50),
-    ads: getAdsData(),
-    stockoutProjections: projections,
-    stockoutRecommendation: getStockoutRecommendation(projections),
+    ads,
+    stockoutProjections,
+    stockoutRecommendation: buildStockoutRecommendation(stockoutProjections),
   };
-});
+}
 
-export const getBriefingData = cache((): BriefingData => {
-  const stats = getSummaryStats();
-  const raw = getSummaryStatsRaw();
-  const refundData = getRefundData();
-  const inventory = getInventoryData();
-  const ads = getAdsData();
+function buildBriefingData(
+  inventory: InventoryRow[],
+  ads: AdRow[],
+  refundData: RefundDataResult,
+  stats: BriefingStats,
+  raw: SummaryStatsRaw,
+  topStockout: StockoutProjectionRow | undefined
+): BriefingData {
 
   const negativeVariants = inventory.filter((r) => r.unitsRemaining < 0);
   const oversoldUnits = negativeVariants.reduce(
@@ -442,7 +445,7 @@ export const getBriefingData = cache((): BriefingData => {
   const worstPerformer = [...ads].sort((a, b) => a.roas - b.roas)[0];
   const bestPerformer = ads[0];
 
-  const stockout = getStockoutProjections(inventory)[0];
+  const stockout = topStockout;
 
   const insights: Insight[] = [
     {
@@ -503,13 +506,14 @@ export const getBriefingData = cache((): BriefingData => {
     insights,
     stats,
   };
-});
+}
 
-export const getSystemPrompt = cache((): string => {
-  const stats = getSummaryStatsRaw();
-  const refundData = getRefundData();
-  const inventory = getInventoryData();
-  const ads = getAdsData();
+function buildSystemPrompt(
+  stats: SummaryStatsRaw,
+  refundData: RefundDataResult,
+  inventory: InventoryRow[],
+  ads: AdRow[]
+): string {
 
   const negativeCount = inventory.filter((r) => r.unitsRemaining < 0).length;
   const oversoldUnits = inventory
@@ -523,4 +527,75 @@ export const getSystemPrompt = cache((): string => {
   const worstAd = ads[ads.length - 1];
 
   return `You are Fly Intelligence, an AI operator co-pilot for Pretty Fly — a London streetwear brand. You know their last 24 months of data. Key facts: Total revenue ${formatGbp(stats.totalRevenue)} across ${formatCount(stats.totalOrders)} orders. AOV ${formatGbp(stats.aov)}. Refund rate ${formatPercent(stats.refundRate)} — ${formatPercent(refundData.sizingShareOfRefunds, 0)} are sizing issues totalling ${formatGbp(refundData.totalSizingValue)}. Top sizing offenders: ${topSizing}. ${formatCount(negativeCount)} variants have negative inventory — ${formatCount(oversoldUnits)} units oversold. Best ad campaign: ${bestAd?.campaign ?? "n/a"} at ${formatRoas(bestAd?.roas ?? 0)} ROAS. Worst: ${worstAd?.campaign ?? "n/a"} at ${formatRoas(worstAd?.roas ?? 0)} ROAS. ${formatPercent(stats.repeatCustomerRate)} repeat customers. Be direct, cite exact figures, keep responses under 150 words unless asked for detail.`;
-});
+}
+
+// ---------------------------------------------------------------------------
+// Module-level cache: parsed once per Node process (build + runtime)
+// ---------------------------------------------------------------------------
+
+const WEEKLY_SELL_RATES = buildWeeklySellRates();
+const INVENTORY_DATA = buildInventoryData(WEEKLY_SELL_RATES);
+const ADS_DATA = buildAdsData();
+const REFUND_DATA = buildRefundData();
+const SUMMARY_STATS_RAW = buildSummaryStatsRaw();
+const SUMMARY_STATS = buildSummaryStats(SUMMARY_STATS_RAW);
+const STOCKOUT_PROJECTIONS = buildStockoutProjections(INVENTORY_DATA);
+const DRILLDOWN_PAYLOAD = buildDrilldownPayload(
+  INVENTORY_DATA,
+  REFUND_DATA,
+  ADS_DATA,
+  STOCKOUT_PROJECTIONS
+);
+const BRIEFING_DATA = buildBriefingData(
+  INVENTORY_DATA,
+  ADS_DATA,
+  REFUND_DATA,
+  SUMMARY_STATS,
+  SUMMARY_STATS_RAW,
+  STOCKOUT_PROJECTIONS[0]
+);
+const SYSTEM_PROMPT = buildSystemPrompt(
+  SUMMARY_STATS_RAW,
+  REFUND_DATA,
+  INVENTORY_DATA,
+  ADS_DATA
+);
+
+/** @internal Parsed Pretty Fly datasets (frozen at module load). */
+export const prettyFlyData = {
+  inventory: INVENTORY_DATA,
+  ads: ADS_DATA,
+  refund: REFUND_DATA,
+  summaryStats: SUMMARY_STATS,
+  summaryStatsRaw: SUMMARY_STATS_RAW,
+  drilldown: DRILLDOWN_PAYLOAD,
+  briefing: BRIEFING_DATA,
+  systemPrompt: SYSTEM_PROMPT,
+} as const;
+
+export const getInventoryData = (): InventoryRow[] => INVENTORY_DATA;
+export const getAdsData = (): AdRow[] => ADS_DATA;
+export const getRefundData = (): RefundDataResult => REFUND_DATA;
+export const getSummaryStatsRaw = (): SummaryStatsRaw => SUMMARY_STATS_RAW;
+export const getSummaryStats = (): BriefingStats => SUMMARY_STATS;
+export const getDrilldownPayload = (): DrilldownPayload => DRILLDOWN_PAYLOAD;
+export const getBriefingData = (): BriefingData => BRIEFING_DATA;
+export const getSystemPrompt = (): string => SYSTEM_PROMPT;
+
+export function getStockoutProjections(
+  inventory: InventoryRow[] = INVENTORY_DATA
+): StockoutProjectionRow[] {
+  return buildStockoutProjections(inventory);
+}
+
+export function getSizingRefundsSummary(
+  refundData: RefundDataResult = REFUND_DATA
+): string {
+  return buildSizingRefundsSummary(refundData);
+}
+
+export function getStockoutRecommendation(
+  projections: StockoutProjectionRow[] = STOCKOUT_PROJECTIONS
+): string {
+  return buildStockoutRecommendation(projections);
+}
