@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect } from "react";
-import Link from "next/link";
+import { useEffect, type ReactNode } from "react";
 import type { Insight } from "@/lib/types";
 import { SeverityBadge } from "./SeverityBadge";
-import { InventoryTable } from "./InventoryTable";
+import { InventoryRiskTable } from "./InventoryRiskTable";
 import { AdsTable } from "./AdsTable";
-import { INVENTORY_DATA, ADS_DATA } from "@/lib/data";
+import { SizingRefundsTable } from "./SizingRefundsTable";
+import { StockoutProjectionsTable } from "./StockoutProjectionsTable";
+import {
+  ADS_DATA,
+  INVENTORY_DATA,
+  SIZING_REFUNDS_DATA,
+  SIZING_REFUNDS_SUMMARY,
+  STOCKOUT_PROJECTIONS_DATA,
+  STOCKOUT_REORDER_RECOMMENDATION,
+} from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -14,6 +22,14 @@ interface DrilldownPanelProps {
   insight: Insight | null;
   isOpen: boolean;
   onClose: () => void;
+}
+
+function PanelSummary({ children }: { children: ReactNode }) {
+  return (
+    <p className="border border-border bg-surface p-4 font-body text-sm leading-relaxed text-text-primary">
+      {children}
+    </p>
+  );
 }
 
 export function DrilldownPanel({
@@ -41,7 +57,7 @@ export function DrilldownPanel({
     <>
       <div
         className={cn(
-          "fixed inset-0 z-50 bg-black/60 transition-opacity duration-300",
+          "fixed inset-0 z-[60] bg-black/70 transition-opacity duration-300 ease",
           isOpen ? "opacity-100" : "pointer-events-none opacity-0"
         )}
         onClick={onClose}
@@ -50,101 +66,60 @@ export function DrilldownPanel({
 
       <aside
         className={cn(
-          "fixed right-0 top-16 z-50 flex h-[calc(100vh-4rem)] w-full max-w-[720px] flex-col border-l border-border bg-surface-elevated transition-transform duration-300 ease-out md:w-[720px]",
+          "fixed right-0 top-14 z-[70] flex h-[calc(100dvh-3.5rem)] w-full max-w-[720px] flex-col border-l border-border bg-surface-elevated transition-transform duration-300 ease sm:top-16 sm:h-[calc(100dvh-4rem)]",
           isOpen ? "translate-x-0" : "translate-x-full"
         )}
         role="dialog"
         aria-modal="true"
         aria-label={insight?.title}
+        onClick={(e) => e.stopPropagation()}
       >
         {insight && (
           <>
-            <div className="flex items-start justify-between border-b border-border bg-background p-8">
-              <div>
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-border bg-background p-6">
+              <div className="min-w-0">
                 <div className="mb-3">
                   <SeverityBadge severity={insight.severity} />
                 </div>
-                <h2 className="font-display text-3xl uppercase leading-none tracking-tight text-text-primary">
+                <h2 className="font-display text-2xl uppercase leading-tight tracking-tight text-text-primary sm:text-3xl">
                   {insight.title}
                 </h2>
-                <p className="mt-2 font-body text-sm text-text-muted">
-                  {insight.detail}
+                <p className="mt-2 font-mono text-xs uppercase tracking-widest text-text-muted">
+                  {insight.action}
                 </p>
               </div>
               <button
+                type="button"
                 onClick={onClose}
-                className="border border-transparent p-2 text-text-muted transition-colors hover:border-border hover:text-text-primary"
+                className="group shrink-0 border border-transparent p-2 text-text-muted transition-colors hover:border-border hover:text-text-primary"
                 aria-label="Close panel"
               >
-                <X className="h-5 w-5" />
+                <X className="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-8">
+            <div className="min-h-0 flex-1 overflow-y-auto p-6">
               {drilldown === "sizing" && (
                 <div className="space-y-6">
-                  <div className="border border-border bg-surface p-6">
-                    <h3 className="mb-4 font-mono text-[10px] uppercase tracking-widest text-text-muted">
-                      Refund Breakdown
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <div className="font-mono text-2xl font-bold text-critical">
-                          1,284
-                        </div>
-                        <div className="font-mono text-xs text-text-muted">
-                          size_too_small
-                        </div>
-                      </div>
-                      <div>
-                        <div className="font-mono text-2xl font-bold text-critical">
-                          1,109
-                        </div>
-                        <div className="font-mono text-xs text-text-muted">
-                          size_too_large
-                        </div>
-                      </div>
-                    </div>
-                    <div className="mt-6 border-t border-border pt-4">
-                      <div className="font-mono text-xl font-bold text-critical">
-                        £305,692
-                      </div>
-                      <div className="font-mono text-xs text-text-muted">
-                        Total sizing refund value (24 months)
-                      </div>
-                    </div>
-                  </div>
-                  <p className="font-body text-sm text-text-muted">
-                    Top offenders: Arch Logo Tee, Boxy Crop Tee, Linen Blend
-                    Tee. Consider updated size guides and fit photography for
-                    these SKUs.
-                  </p>
+                  <PanelSummary>{SIZING_REFUNDS_SUMMARY}</PanelSummary>
+                  <SizingRefundsTable data={SIZING_REFUNDS_DATA} />
                 </div>
               )}
 
               {drilldown === "inventory" && (
-                <div className="space-y-4">
-                  <InventoryTable data={INVENTORY_DATA} />
-                  <Link
-                    href="/inventory"
-                    onClick={onClose}
-                    className="inline-block font-mono text-xs uppercase tracking-widest text-accent hover:opacity-70"
-                  >
-                    View full inventory →
-                  </Link>
-                </div>
+                <InventoryRiskTable data={INVENTORY_DATA} />
               )}
 
               {drilldown === "ads" && (
-                <div className="space-y-4">
+                <div className="overflow-x-auto">
                   <AdsTable data={ADS_DATA} />
-                  <Link
-                    href="/ads"
-                    onClick={onClose}
-                    className="inline-block font-mono text-xs uppercase tracking-widest text-accent hover:opacity-70"
-                  >
-                    View full ad performance →
-                  </Link>
+                </div>
+              )}
+
+              {drilldown === "projections" && (
+                <div className="space-y-6">
+                  <PanelSummary>{STOCKOUT_REORDER_RECOMMENDATION}</PanelSummary>
+                  <StockoutProjectionsTable data={STOCKOUT_PROJECTIONS_DATA} />
                 </div>
               )}
             </div>

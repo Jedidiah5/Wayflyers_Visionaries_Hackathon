@@ -1,4 +1,10 @@
-import type { AdRow, BriefingData, InventoryRow } from "./types";
+import type {
+  AdRow,
+  BriefingData,
+  InventoryRow,
+  SizingRefundRow,
+  StockoutProjectionRow,
+} from "./types";
 
 export const BRIEFING_DATA: BriefingData = {
   date: "Wednesday 4 June, 07:42",
@@ -45,7 +51,7 @@ export const BRIEFING_DATA: BriefingData = {
       detail:
         "53.8% of customers are repeat buyers. Average LTV £290. Womenswear launched Dec 2025 — £42k first month, declining to £34k by May 2026.",
       action: "View projections",
-      drilldown: "inventory",
+      drilldown: "projections",
     },
   ],
   stats: {
@@ -122,6 +128,72 @@ export const INVENTORY_DATA: InventoryRow[] = [
     status: "CRITICAL",
   },
 ];
+
+export const SIZING_REFUNDS_DATA: SizingRefundRow[] = [
+  {
+    product: "Arch Logo Tee",
+    sizingRefunds: 487,
+    refundValue: "£62,340",
+    percentOfProductRefunds: "44%",
+  },
+  {
+    product: "Boxy Crop Tee",
+    sizingRefunds: 312,
+    refundValue: "£48,210",
+    percentOfProductRefunds: "41%",
+  },
+  {
+    product: "Linen Blend Tee",
+    sizingRefunds: 298,
+    refundValue: "£41,890",
+    percentOfProductRefunds: "39%",
+  },
+  {
+    product: "Heritage Hoodie",
+    sizingRefunds: 201,
+    refundValue: "£38,120",
+    percentOfProductRefunds: "35%",
+  },
+  {
+    product: "Court Trainer",
+    sizingRefunds: 189,
+    refundValue: "£52,890",
+    percentOfProductRefunds: "31%",
+  },
+];
+
+export const SIZING_REFUNDS_SUMMARY =
+  "£305,692 lost. Fix sizing guidance on these 5 products and you recover an estimated £91,707 annually (30% reduction).";
+
+export const STOCKOUT_PROJECTIONS_DATA: StockoutProjectionRow[] = [
+  {
+    product: "Cargo Pants Slim",
+    currentStock: 42,
+    weeklySellRate: 68,
+    daysRemaining: 4,
+  },
+  {
+    product: "Cargo Pants Wide",
+    currentStock: 31,
+    weeklySellRate: 55,
+    daysRemaining: 4,
+  },
+  {
+    product: "Arch Logo Tee (Grey)",
+    currentStock: 18,
+    weeklySellRate: 23,
+    daysRemaining: 5,
+  },
+  {
+    product: "Heritage Hoodie (Black, XL)",
+    currentStock: 12,
+    weeklySellRate: 14,
+    daysRemaining: 6,
+  },
+];
+
+export const STOCKOUT_REORDER_RECOMMENDATION =
+  "Reorder Cargo Pants Slim (500 units) and Cargo Pants Wide (400 units) immediately — both hit stockout in 4 days at current velocity. Expedite Portugal supplier PO #PF-2847.";
 
 export const ADS_DATA: AdRow[] = [
   {

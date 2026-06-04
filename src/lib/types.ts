@@ -1,6 +1,20 @@
 export type InsightSeverity = "critical" | "warning" | "opportunity";
 
-export type DrilldownType = "sizing" | "inventory" | "ads";
+export type DrilldownType = "sizing" | "inventory" | "ads" | "projections";
+
+export interface SizingRefundRow {
+  product: string;
+  sizingRefunds: number;
+  refundValue: string;
+  percentOfProductRefunds: string;
+}
+
+export interface StockoutProjectionRow {
+  product: string;
+  currentStock: number;
+  weeklySellRate: number;
+  daysRemaining: number;
+}
 
 export interface Insight {
   id: string;
