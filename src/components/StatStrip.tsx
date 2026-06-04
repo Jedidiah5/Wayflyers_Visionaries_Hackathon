@@ -1,4 +1,7 @@
+"use client";
+
 import type { BriefingStats } from "@/lib/types";
+import { AnimatedStatValue } from "./AnimatedStatValue";
 
 interface StatStripProps {
   stats: BriefingStats;
@@ -30,7 +33,7 @@ export function StatStrip({ stats }: StatStripProps) {
               {item.label}
             </span>
             <span className="font-mono text-base font-bold text-text-primary">
-              {stats[item.key]}
+              <AnimatedStatValue value={stats[item.key]} />
             </span>
           </div>
         ))}
