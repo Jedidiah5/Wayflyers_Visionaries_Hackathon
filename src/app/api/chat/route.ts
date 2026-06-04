@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { SYSTEM_PROMPT } from "@/lib/data";
+import { getSystemPrompt } from "@/lib/data";
 import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
@@ -29,7 +29,7 @@ async function generateReply(
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
     model: modelName,
-    systemInstruction: SYSTEM_PROMPT,
+    systemInstruction: getSystemPrompt(),
   });
 
   const last = messages[messages.length - 1];

@@ -1,20 +1,12 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import type { Insight } from "@/lib/types";
+import type { DrilldownPayload, Insight } from "@/lib/types";
 import { SeverityBadge } from "./SeverityBadge";
 import { InventoryRiskTable } from "./InventoryRiskTable";
 import { AdsTable } from "./AdsTable";
 import { SizingRefundsTable } from "./SizingRefundsTable";
 import { StockoutProjectionsTable } from "./StockoutProjectionsTable";
-import {
-  ADS_DATA,
-  INVENTORY_DATA,
-  SIZING_REFUNDS_DATA,
-  SIZING_REFUNDS_SUMMARY,
-  STOCKOUT_PROJECTIONS_DATA,
-  STOCKOUT_REORDER_RECOMMENDATION,
-} from "@/lib/data";
 import { cn } from "@/lib/utils";
 import { X } from "lucide-react";
 
@@ -22,6 +14,7 @@ interface DrilldownPanelProps {
   insight: Insight | null;
   isOpen: boolean;
   onClose: () => void;
+  drilldown: DrilldownPayload;
 }
 
 function PanelSummary({ children }: { children: ReactNode }) {
@@ -36,6 +29,7 @@ export function DrilldownPanel({
   insight,
   isOpen,
   onClose,
+  drilldown,
 }: DrilldownPanelProps) {
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -51,7 +45,7 @@ export function DrilldownPanel({
     };
   }, [isOpen, onClose]);
 
-  const drilldown = insight?.drilldown;
+  const type = insight?.drilldown;
 
   return (
     <>
@@ -99,27 +93,27 @@ export function DrilldownPanel({
             </div>
 
             <div className="min-h-0 flex-1 overflow-y-auto p-6">
-              {drilldown === "sizing" && (
+              {type === "sizing" && (
                 <div className="space-y-6">
-                  <PanelSummary>{SIZING_REFUNDS_SUMMARY}</PanelSummary>
-                  <SizingRefundsTable data={SIZING_REFUNDS_DATA} />
+                  <PanelSummary>{drilldown.sizingSummary}</PanelSummary>
+                  <SizingRefundsTable data={drilldown.sizingRefunds} />
                 </div>
               )}
 
-              {drilldown === "inventory" && (
-                <InventoryRiskTable data={INVENTORY_DATA} />
+              {type === "inventory" && (
+                <InventoryRiskTable data={drilldown.inventory} />
               )}
 
-              {drilldown === "ads" && (
+              {type === "ads" && (
                 <div className="overflow-x-auto">
-                  <AdsTable data={ADS_DATA} />
+                  <AdsTable data={drilldown.ads} />
                 </div>
               )}
 
-              {drilldown === "projections" && (
+              {type === "projections" && (
                 <div className="space-y-6">
-                  <PanelSummary>{STOCKOUT_REORDER_RECOMMENDATION}</PanelSummary>
-                  <StockoutProjectionsTable data={STOCKOUT_PROJECTIONS_DATA} />
+                  <PanelSummary>{drilldown.stockoutRecommendation}</PanelSummary>
+                  <StockoutProjectionsTable data={drilldown.stockoutProjections} />
                 </div>
               )}
             </div>

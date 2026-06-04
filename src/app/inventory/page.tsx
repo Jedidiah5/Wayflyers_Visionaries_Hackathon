@@ -1,6 +1,7 @@
-import { INVENTORY_DATA } from "@/lib/data";
 import { InventoryDeepDive } from "@/components/InventoryDeepDive";
+import { getInventoryData } from "@/lib/data";
 
 export default function InventoryPage() {
-  return <InventoryDeepDive data={INVENTORY_DATA} />;
+  const inventory = getInventoryData();
+  return <InventoryDeepDive data={inventory} />;
 }

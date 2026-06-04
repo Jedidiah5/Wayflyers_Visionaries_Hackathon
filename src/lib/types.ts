@@ -68,3 +68,12 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
 }
+
+export interface DrilldownPayload {
+  sizingRefunds: SizingRefundRow[];
+  sizingSummary: string;
+  inventory: InventoryRow[];
+  ads: AdRow[];
+  stockoutProjections: StockoutProjectionRow[];
+  stockoutRecommendation: string;
+}
