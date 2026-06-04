@@ -84,6 +84,7 @@ export default function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const busyRef = useRef(false);
+  const messagesRef = useRef<ChatMessage[]>([]);
 
   const scrollToBottom = useCallback(() => {
     const el = scrollRef.current;
@@ -106,27 +107,24 @@ export default function ChatPage() {
       content: trimmed,
     };
 
-    let history: ChatMessage[] = [];
-
-    setMessages((prev) => {
-      history = [...prev, userMsg];
-      return history;
-    });
+    const history = [...messagesRef.current, userMsg];
+    messagesRef.current = history;
+    setMessages(history);
 
     setInput("");
     busyRef.current = true;
     setThinking(true);
 
+    const apiPayload = history.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
     try {
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: history.map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-        }),
+        body: JSON.stringify({ messages: apiPayload }),
       });
 
       const data = await res.json();
@@ -136,23 +134,27 @@ export default function ChatPage() {
         throw new Error(data.error ?? `Request failed (${res.status})`);
       }
 
-      setMessages((prev) => [
-        ...prev,
-        { id: uid(), role: "assistant", content: data.content },
-      ]);
+      const withReply = [
+        ...history,
+        { id: uid(), role: "assistant" as const, content: data.content },
+      ];
+      messagesRef.current = withReply;
+      setMessages(withReply);
     } catch (err) {
       console.error("[chat] Send failed:", err);
-      setMessages((prev) => [
-        ...prev,
+      const withError = [
+        ...history,
         {
           id: uid(),
-          role: "assistant",
+          role: "assistant" as const,
           content:
             err instanceof Error
               ? err.message
               : "Request failed. Check the terminal for details.",
         },
-      ]);
+      ];
+      messagesRef.current = withError;
+      setMessages(withError);
     } finally {
       busyRef.current = false;
       setThinking(false);
