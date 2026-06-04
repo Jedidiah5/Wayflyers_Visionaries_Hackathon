@@ -49,8 +49,10 @@ export interface InventoryRow {
   colour: string;
   size: string;
   unitsRemaining: number;
-  weeklySellRate: number;
-  daysToStockout: number;
+  /** Units sold per week (last 90d sales ÷ 13); null → display "—" */
+  weeklySellRate: number | null;
+  /** null → display "—" */
+  daysToStockout: number | null;
   status: "CRITICAL" | "WARNING" | "OK";
 }
 

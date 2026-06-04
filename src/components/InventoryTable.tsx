@@ -71,15 +71,17 @@ export function InventoryTable({ data }: InventoryTableProps) {
             {row.unitsRemaining.toLocaleString()}
           </div>
           <div className="font-mono text-sm text-text-primary">
-            {row.weeklySellRate}
+            {row.weeklySellRate != null ? row.weeklySellRate : "—"}
           </div>
           <div
             className={cn(
               "font-mono text-sm font-bold",
-              row.daysToStockout <= 7 ? "text-warning" : "text-text-primary"
+              row.daysToStockout != null && row.daysToStockout <= 7
+                ? "text-warning"
+                : "text-text-primary"
             )}
           >
-            {row.daysToStockout}
+            {row.daysToStockout != null ? row.daysToStockout : "—"}
           </div>
           <div>
             <StatusBadge status={row.status} />

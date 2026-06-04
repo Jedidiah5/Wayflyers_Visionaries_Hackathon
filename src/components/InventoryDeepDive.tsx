@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import type { InventoryRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -11,7 +12,9 @@ interface InventoryDeepDiveProps {
 }
 
 function BurnRateChart({ data }: { data: InventoryRow[] }) {
-  const rates = data.map((row) => row.weeklySellRate);
+  const rates = data
+    .map((row) => row.weeklySellRate)
+    .filter((r): r is number => r != null);
   const maxRate = Math.max(...rates, 1);
 
   return (
@@ -46,6 +49,15 @@ function BurnRateChart({ data }: { data: InventoryRow[] }) {
 }
 
 export function InventoryDeepDive({ data }: InventoryDeepDiveProps) {
+  const [showAll, setShowAll] = useState(false);
+  const totalCount = data.length;
+  const criticalRows = useMemo(
+    () => data.filter((row) => row.unitsRemaining < 0),
+    [data]
+  );
+  const criticalCount = criticalRows.length;
+  const visibleRows = showAll ? data : criticalRows;
+
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pt-14 sm:pt-16">
       <div className="absolute inset-0 hidden gap-px bg-[#0a0a0a] p-8 opacity-30 md:grid md:grid-cols-12">
@@ -97,9 +109,23 @@ export function InventoryDeepDive({ data }: InventoryDeepDiveProps) {
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-black p-3 sm:p-4">
-            <BurnRateChart data={data} />
-            <InventoryRiskTable data={data} />
-            <div className="mt-2 flex justify-start sm:justify-end">
+            <BurnRateChart data={visibleRows} />
+            <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-white sm:text-[11px]">
+              {showAll
+                ? `Showing all ${totalCount} variants`
+                : `Showing ${criticalCount} critical variants of ${totalCount} total`}
+            </p>
+            <InventoryRiskTable data={visibleRows} />
+            <div className="mt-4 flex flex-col items-start gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => setShowAll((v) => !v)}
+                className="font-mono text-[11px] uppercase tracking-widest text-accent transition-colors hover:text-text-primary"
+              >
+                {showAll
+                  ? "Show critical only ↑"
+                  : `Show all ${totalCount} variants →`}
+              </button>
               <span className="font-mono text-[10px] italic leading-relaxed text-text-muted sm:text-xs">
                 Data sync: Real-time. Ovr-allocations indicated by negative
                 integers.

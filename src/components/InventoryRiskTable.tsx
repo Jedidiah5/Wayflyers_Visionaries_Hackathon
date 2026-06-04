@@ -88,15 +88,21 @@ export function InventoryRiskTable({ data }: InventoryRiskTableProps) {
             >
               {row.unitsRemaining}
             </div>
-            <div className="text-right text-text-muted">{row.weeklySellRate}</div>
+            <div className="text-right text-text-muted">
+              {row.weeklySellRate != null ? row.weeklySellRate : "—"}
+            </div>
             <div
               className={cn(
                 "text-right font-bold",
-                row.daysToStockout <= 6 && "text-warning",
-                row.daysToStockout <= 4 && "text-critical"
+                row.daysToStockout != null &&
+                  row.daysToStockout <= 6 &&
+                  "text-warning",
+                row.daysToStockout != null &&
+                  row.daysToStockout <= 4 &&
+                  "text-critical"
               )}
             >
-              {row.daysToStockout}
+              {row.daysToStockout != null ? row.daysToStockout : "—"}
             </div>
             <div className="text-right">
               <StatusBadge status={row.status} />

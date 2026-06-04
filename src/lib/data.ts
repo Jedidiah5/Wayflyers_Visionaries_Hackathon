@@ -72,34 +72,42 @@ function optionValue(
 }
 
 // ---------------------------------------------------------------------------
-// Sell-rate cache (28-day line items → weekly units)
+// Weekly sell rate from inventory_movements (sales in last 90 days ÷ 13)
 // ---------------------------------------------------------------------------
 
+const SELL_RATE_LOOKBACK_DAYS = 90;
+const SELL_RATE_WEEKS = 13;
+
 function buildWeeklySellRates(): Map<string, number> {
-  const orders = readCsv<{ order_id: string; created_at: string }>("orders.csv");
-  const cutoff = Date.now() - 28 * 24 * 60 * 60 * 1000;
-  const recentOrderIds = new Set(
-    orders
-      .filter((o) => new Date(o.created_at).getTime() >= cutoff)
-      .map((o) => o.order_id)
-  );
-
-  const lineItems = readCsv<{
-    order_id: string;
+  const movements = readCsv<{
     variant_id: string;
-    quantity: string;
-  }>("line_items.csv");
+    date: string;
+    type: string;
+    quantity_delta: string;
+  }>("inventory_movements.csv");
 
-  const qty28d = new Map<string, number>();
-  for (const li of lineItems) {
-    if (!recentOrderIds.has(li.order_id)) continue;
-    const vid = li.variant_id;
-    qty28d.set(vid, (qty28d.get(vid) ?? 0) + parseNum(li.quantity));
+  let latest = 0;
+  for (const row of movements) {
+    const ts = new Date(row.date).getTime();
+    if (Number.isFinite(ts) && ts > latest) latest = ts;
+  }
+  const cutoff = latest - SELL_RATE_LOOKBACK_DAYS * 24 * 60 * 60 * 1000;
+
+  const sales90d = new Map<string, number>();
+  for (const row of movements) {
+    if (row.type !== "sale") continue;
+    if (new Date(row.date).getTime() < cutoff) continue;
+    const vid = row.variant_id;
+    sales90d.set(
+      vid,
+      (sales90d.get(vid) ?? 0) + Math.abs(parseNum(row.quantity_delta))
+    );
   }
 
   const weekly = new Map<string, number>();
-  qty28d.forEach((qty, vid) => {
-    weekly.set(vid, Math.round(qty / 4));
+  sales90d.forEach((unitsSold, vid) => {
+    const rate = unitsSold / SELL_RATE_WEEKS;
+    if (rate > 0) weekly.set(vid, rate);
   });
   return weekly;
 }
@@ -125,11 +133,15 @@ function buildInventoryData(sellRates: Map<string, number>): InventoryRow[] {
 
   const rows: InventoryRow[] = variants.map((v) => {
     const unitsRemaining = parseNum(v.inventory_quantity);
-    const weeklySellRate = sellRates.get(v.variant_id) ?? 0;
+    const rawRate = sellRates.get(v.variant_id);
+    const weeklySellRate =
+      rawRate != null && rawRate > 0 ? Math.round(rawRate * 10) / 10 : null;
     const daysToStockout =
-      unitsRemaining > 0 && weeklySellRate > 0
+      weeklySellRate != null &&
+      weeklySellRate > 0 &&
+      unitsRemaining > 0
         ? Math.floor(unitsRemaining / (weeklySellRate / 7))
-        : 0;
+        : null;
 
     return {
       sku: v.sku,
@@ -423,12 +435,18 @@ function buildSummaryStats(s: SummaryStatsRaw): BriefingStats {
 
 function buildStockoutProjections(inventory: InventoryRow[]): StockoutProjectionRow[] {
   return inventory
-    .filter((r) => r.unitsRemaining > 0 && r.weeklySellRate > 0)
+    .filter(
+      (r) =>
+        r.unitsRemaining > 0 &&
+        r.weeklySellRate != null &&
+        r.weeklySellRate > 0 &&
+        r.daysToStockout != null
+    )
     .map((r) => ({
       product: `${r.product} (${r.colour}, ${r.size})`,
       currentStock: r.unitsRemaining,
-      weeklySellRate: r.weeklySellRate,
-      daysRemaining: r.daysToStockout,
+      weeklySellRate: r.weeklySellRate as number,
+      daysRemaining: r.daysToStockout as number,
     }))
     .sort((a, b) => a.daysRemaining - b.daysRemaining)
     .slice(0, 4);
