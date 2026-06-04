@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { ChatMessage } from "@/lib/types";
+import { AssistantAvatar } from "@/components/AssistantAvatar";
 
 const SUGGESTIONS = [
   "What's killing our margins?",
@@ -34,23 +35,28 @@ function highlightNumbers(text: string) {
 function MessageBubble({ message }: { message: ChatMessage }) {
   const isUser = message.role === "user";
 
+  if (isUser) {
+    return (
+      <div className="flex w-full justify-end">
+        <div className="max-w-[88%] text-right sm:max-w-[72%]">
+          <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-[#c8ff00]">
+            You
+          </p>
+          <div className="inline-block border border-[#c8ff00]/30 bg-[#1a1a1a] px-4 py-3 text-left text-sm leading-relaxed text-[#e2e2e2]">
+            <span className="whitespace-pre-wrap">
+              {highlightNumbers(message.content)}
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className={`flex w-full ${isUser ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[88%] sm:max-w-[72%] ${isUser ? "text-right" : ""}`}>
-        <p
-          className={`mb-1.5 font-mono text-[10px] uppercase tracking-widest ${
-            isUser ? "text-[#c8ff00]" : "text-[#888888]"
-          }`}
-        >
-          {isUser ? "You" : "Fly Intelligence"}
-        </p>
-        <div
-          className={`inline-block border px-4 py-3 text-left text-sm leading-relaxed ${
-            isUser
-              ? "border-[#c8ff00]/30 bg-[#1a1a1a] text-[#e2e2e2]"
-              : "border-[#2a2a2a] bg-[#111111] text-[#e2e2e2]"
-          }`}
-        >
+    <div className="flex w-full justify-start">
+      <div className="flex max-w-[88%] flex-col items-start sm:max-w-[72%]">
+        <AssistantAvatar size={28} className="mb-2" />
+        <div className="inline-block border border-[#2a2a2a] bg-[#111111] px-4 py-3 text-left text-sm leading-relaxed text-[#e2e2e2]">
           <span className="whitespace-pre-wrap">
             {highlightNumbers(message.content)}
           </span>
@@ -63,10 +69,8 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 function ThinkingBubble() {
   return (
     <div className="flex w-full justify-start">
-      <div>
-        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-[#888888]">
-          Fly Intelligence
-        </p>
+      <div className="flex max-w-[88%] flex-col items-start sm:max-w-[72%]">
+        <AssistantAvatar size={28} className="mb-2" />
         <div className="inline-block border border-[#2a2a2a] bg-[#111111] px-4 py-3">
           <span className="font-mono text-sm text-[#888888]">
             <span className="animate-blink">...</span>

@@ -24,6 +24,10 @@ export const metadata: Metadata = {
   title: "Fly Intelligence — Pretty Fly Operator Co-pilot",
   description:
     "AI-powered internal dashboard for Pretty Fly streetwear brand operations.",
+  icons: {
+    icon: "/fly-intelligence-logo.png",
+    apple: "/fly-intelligence-logo.png",
+  },
 };
 
 export default function RootLayout({

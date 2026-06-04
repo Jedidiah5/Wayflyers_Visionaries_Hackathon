@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Menu, X } from "lucide-react";
+import { FlyWordmark } from "./FlyLogo";
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
@@ -22,13 +23,12 @@ export function TopNav() {
       <nav className="fixed top-0 left-0 z-50 flex h-14 w-full items-center justify-between border-b border-border bg-background px-4 sm:h-16 sm:px-8">
         <Link
           href="/"
-          className="font-display text-lg uppercase tracking-tight text-text-primary sm:text-2xl"
+          className="transition-opacity hover:opacity-90"
           onClick={() => setMenuOpen(false)}
         >
-          Fly Intelligence
+          <FlyWordmark logoSize={28} />
         </Link>
 
-        {/* Desktop nav */}
         <div className="hidden h-full items-center gap-6 md:flex md:gap-8">
           {NAV_ITEMS.map((item) => {
             const isActive =
@@ -53,7 +53,6 @@ export function TopNav() {
           })}
         </div>
 
-        {/* Mobile menu toggle */}
         <button
           type="button"
           aria-label={menuOpen ? "Close menu" : "Open menu"}
@@ -69,7 +68,6 @@ export function TopNav() {
         </button>
       </nav>
 
-      {/* Mobile nav drawer */}
       {menuOpen && (
         <>
           <div

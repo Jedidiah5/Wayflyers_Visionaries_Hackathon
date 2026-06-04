@@ -4,7 +4,7 @@ import Link from "next/link";
 import type { InventoryRow } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { InventoryRiskTable } from "./InventoryRiskTable";
-import { AlertTriangle, ArrowRight, Download, X } from "lucide-react";
+import { ArrowRight, Download, X } from "lucide-react";
 
 interface InventoryDeepDiveProps {
   data: InventoryRow[];
@@ -64,7 +64,6 @@ export function InventoryDeepDive({ data }: InventoryDeepDiveProps) {
         <div className="relative z-50 flex min-h-0 w-full max-w-[960px] flex-1 flex-col border-[#1a1a1a] bg-black shadow-[0_0_0_1px_rgba(26,26,26,1)] md:h-auto md:max-h-[870px] md:flex-none md:border">
           <div className="flex min-h-12 shrink-0 items-center justify-between gap-2 border-b border-[#1a1a1a] bg-[#0a0a0a] px-3 py-2 sm:px-4 sm:py-0">
             <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-4">
-              <AlertTriangle className="h-4 w-4 shrink-0 text-accent sm:h-[18px] sm:w-[18px]" />
               <h2 className="font-mono text-[10px] uppercase tracking-widest text-text-primary sm:text-[11px]">
                 Inventory Risk // Critical SKUs
               </h2>
