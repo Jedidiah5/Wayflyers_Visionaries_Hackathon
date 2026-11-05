@@ -30,6 +30,7 @@ const PACK_DATA = path.join(
 );
 const OUT_DIR = path.join(ROOT, "data");
 const OUT_FILE = path.join(OUT_DIR, "support-index.json");
+const CHECKPOINT_FILE = path.join(OUT_DIR, "support-index.partial.jsonl");
 
 interface TicketMessage {
   message_id: string;
@@ -201,9 +202,46 @@ function buildChunks(
   return chunks;
 }
 
+function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function isDailyQuota(error: unknown): boolean {
+  return /per day|EmbedContentRequestsPerDay|retry in \d+h/i.test(
+    errorMessage(error)
+  );
+}
+
 function isRateLimit(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return /429|rate limit|resource_exhausted|quota/i.test(message);
+  return /429|rate limit|resource_exhausted|quota/i.test(errorMessage(error));
+}
+
+function loadCheckpoint(): IndexedChunk[] {
+  if (!fs.existsSync(CHECKPOINT_FILE)) return [];
+  const lines = fs.readFileSync(CHECKPOINT_FILE, "utf-8").split(/\r?\n/);
+  const chunks: IndexedChunk[] = [];
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    chunks.push(JSON.parse(trimmed) as IndexedChunk);
+  }
+  return chunks;
+}
+
+function appendCheckpoint(batch: IndexedChunk[]): void {
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+  const payload = batch.map((chunk) => JSON.stringify(chunk)).join("\n") + "\n";
+  fs.appendFileSync(CHECKPOINT_FILE, payload);
+}
+
+function writeFinalIndex(chunks: IndexedChunk[]): void {
+  fs.mkdirSync(OUT_DIR, { recursive: true });
+  fs.writeFileSync(OUT_FILE, JSON.stringify(chunks));
+  if (fs.existsSync(CHECKPOINT_FILE)) fs.unlinkSync(CHECKPOINT_FILE);
+  const bytes = fs.statSync(OUT_FILE).size;
+  console.log(
+    `[index] wrote ${chunks.length} chunks to ${path.relative(ROOT, OUT_FILE)} (${(bytes / (1024 * 1024)).toFixed(1)} MB)`
+  );
 }
 
 async function sleep(ms: number): Promise<void> {
@@ -225,6 +263,7 @@ async function embedBatch(
       });
       return response.embeddings.map((item) => item.values);
     } catch (error) {
+      if (isDailyQuota(error)) throw error;
       attempt += 1;
       if (!isRateLimit(error) || attempt > MAX_RETRIES) throw error;
       const waitMs = 1000 * 2 ** attempt;
@@ -268,32 +307,46 @@ async function main(): Promise<void> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({ model: EMBED_MODEL });
 
-  const indexed: IndexedChunk[] = [];
-  for (let offset = 0; offset < chunks.length; offset += BATCH_SIZE) {
-    const batch = chunks.slice(offset, offset + BATCH_SIZE);
-    const vectors = await embedBatch(
-      model,
-      batch.map((chunk) => chunk.text)
-    );
-    if (vectors.length !== batch.length) {
-      throw new Error(
-        `Embedding batch size mismatch: expected ${batch.length}, got ${vectors.length}`
-      );
-    }
-    batch.forEach((chunk, index) => {
-      indexed.push({ ...chunk, embedding: vectors[index] });
-    });
+  const indexed = loadCheckpoint();
+  const doneIds = new Set(indexed.map((chunk) => chunk.id));
+  const pending = chunks.filter((chunk) => !doneIds.has(chunk.id));
+  if (doneIds.size > 0) {
     console.log(
-      `[index] embedded ${Math.min(offset + BATCH_SIZE, chunks.length)}/${chunks.length}`
+      `[index] resuming: ${doneIds.size} chunks already checkpointed, ${pending.length} left`
     );
   }
 
-  fs.mkdirSync(OUT_DIR, { recursive: true });
-  fs.writeFileSync(OUT_FILE, JSON.stringify(indexed));
-  const bytes = fs.statSync(OUT_FILE).size;
-  console.log(
-    `[index] wrote ${indexed.length} chunks to ${path.relative(ROOT, OUT_FILE)} (${(bytes / (1024 * 1024)).toFixed(1)} MB)`
-  );
+  try {
+    for (let offset = 0; offset < pending.length; offset += BATCH_SIZE) {
+      const batch = pending.slice(offset, offset + BATCH_SIZE);
+      const vectors = await embedBatch(
+        model,
+        batch.map((chunk) => chunk.text)
+      );
+      if (vectors.length !== batch.length) {
+        throw new Error(
+          `Embedding batch size mismatch: expected ${batch.length}, got ${vectors.length}`
+        );
+      }
+      const embedded: IndexedChunk[] = batch.map((chunk, index) => ({
+        ...chunk,
+        embedding: vectors[index],
+      }));
+      appendCheckpoint(embedded);
+      indexed.push(...embedded);
+      console.log(`[index] embedded ${indexed.length}/${chunks.length}`);
+    }
+  } catch (error) {
+    if (isDailyQuota(error) && indexed.length > 0) {
+      console.warn(
+        `[index] daily embed quota reached after ${indexed.length}/${chunks.length} chunks. Progress saved to ${path.relative(ROOT, CHECKPOINT_FILE)}. Re-run npm run index after the quota resets.`
+      );
+      return;
+    }
+    throw error;
+  }
+
+  writeFinalIndex(indexed);
 }
 
 main().catch((error: unknown) => {
