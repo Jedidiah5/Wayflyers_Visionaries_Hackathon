@@ -61,6 +61,21 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             {highlightNumbers(message.content)}
           </span>
         </div>
+        {message.sources && message.sources.length > 0 && (
+          <ul className="mt-2 w-full space-y-1">
+            {message.sources.map((source) => (
+              <li
+                key={source.ticket_id}
+                className="border border-[#2a2a2a] bg-[#111111] px-3 py-2 font-mono text-[10px] leading-relaxed text-[#888888]"
+              >
+                <span className="text-[#c8ff00]">[{source.ticket_id}]</span>
+                {source.product_name ? ` ${source.product_name}` : ""}
+                {source.category ? ` · ${source.category}` : ""}
+                {source.snippet ? ` — ${source.snippet}` : ""}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
@@ -140,7 +155,12 @@ export default function ChatPage() {
 
       const withReply = [
         ...history,
-        { id: uid(), role: "assistant" as const, content: data.content },
+        {
+          id: uid(),
+          role: "assistant" as const,
+          content: data.content,
+          sources: Array.isArray(data.sources) ? data.sources : [],
+        },
       ];
       messagesRef.current = withReply;
       setMessages(withReply);

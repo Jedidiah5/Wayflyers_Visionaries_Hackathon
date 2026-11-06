@@ -65,10 +65,19 @@ export interface AdRow {
   verdict: "SCALE" | "MAINTAIN" | "REVIEW" | "PAUSE" | "KILL";
 }
 
+export interface ChatSource {
+  ticket_id: string;
+  category: string;
+  product_name: string;
+  snippet: string;
+  score: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  sources?: ChatSource[];
 }
 
 export interface DrilldownPayload {
